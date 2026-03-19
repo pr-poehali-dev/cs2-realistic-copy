@@ -267,17 +267,38 @@ export class GameEngine {
   }
 
   private updateWeaponVisual() {
-    // Clear existing children
     while (this.weaponGroup.children.length) this.weaponGroup.remove(this.weaponGroup.children[0]);
 
-    const def = this.weaponDef;
-    const bodyMat = new THREE.MeshStandardMaterial({ color: def.color, roughness: 0.3, metalness: 0.75 });
-    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8B5E3C, roughness: 0.82 });
-    const metalMat = new THREE.MeshStandardMaterial({ color: 0x3a3a38, roughness: 0.18, metalness: 0.92 });
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xc8a882, roughness: 0.78 });
-    const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x2a3a2a, roughness: 0.9 });
+    const id = this.weaponDef.id;
 
-    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0): THREE.Mesh => {
+    // ── SHARED MATERIALS ──
+    const mk = (color: number, rough: number, metal = 0) =>
+      new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+
+    const MAT = {
+      black:     mk(0x1a1a18, 0.25, 0.85),
+      darkSteel: mk(0x2e2e2c, 0.20, 0.90),
+      steel:     mk(0x4a4a48, 0.18, 0.92),
+      lightSteel:mk(0x6a6a68, 0.22, 0.88),
+      gunmetal:  mk(0x28282a, 0.30, 0.80),
+      wood:      mk(0x8B5E3C, 0.82, 0.00),
+      darkWood:  mk(0x5a3a20, 0.88, 0.00),
+      walnut:    mk(0x6b3a22, 0.85, 0.00),
+      tan:       mk(0xc8a87a, 0.75, 0.00),
+      olive:     mk(0x4a5230, 0.85, 0.00),
+      rubber:    mk(0x1e1e1e, 0.95, 0.00),
+      chrome:    mk(0xc0c0c0, 0.05, 1.00),
+      gold:      mk(0xb8860b, 0.15, 0.90),
+      brass:     mk(0x8B6914, 0.25, 0.75),
+      skin:      mk(0xc8a882, 0.78, 0.00),
+      sleeve:    mk(0x2a3a2a, 0.90, 0.00),
+    };
+
+    const add = (
+      geo: THREE.BufferGeometry, mat: THREE.Material,
+      x: number, y: number, z: number,
+      rx = 0, ry = 0, rz = 0
+    ): THREE.Mesh => {
       const m = new THREE.Mesh(geo, mat);
       m.position.set(x, y, z);
       m.rotation.set(rx, ry, rz);
@@ -286,67 +307,437 @@ export class GameEngine {
       return m;
     };
 
-    if (def.id === 'knife') {
-      add(new THREE.BoxGeometry(0.018, 0.22, 0.03), metalMat, 0, 0.02, -0.22);
-      add(new THREE.BoxGeometry(0.025, 0.09, 0.025), woodMat, 0, -0.07, -0.06);
-    } else if (def.id === 'awp') {
-      add(new THREE.BoxGeometry(0.07, 0.07, 0.55), bodyMat, 0, 0, 0);
-      add(new THREE.CylinderGeometry(0.013, 0.013, 0.65, 12), metalMat, 0, 0.01, -0.52, Math.PI / 2, 0, 0);
-      add(new THREE.BoxGeometry(0.05, 0.065, 0.28), woodMat, 0, -0.01, 0.26);
-      add(new THREE.BoxGeometry(0.04, 0.11, 0.06), woodMat, 0, -0.09, 0.1, 0.3, 0, 0);
-      add(new THREE.BoxGeometry(0.04, 0.18, 0.07), bodyMat, 0, -0.14, 0.02, -0.15, 0, 0);
-      // Scope
-      add(new THREE.CylinderGeometry(0.025, 0.025, 0.2, 10), metalMat, 0, 0.055, -0.1, Math.PI / 2, 0, 0);
-    } else {
-      // Generic rifle / pistol
-      const isSmg = def.id === 'mp5';
-      const isPistol = def.id === 'p250' || def.id === 'deagle';
-      const scale = isPistol ? 0.65 : 1;
-      const zOff = isPistol ? 0.08 : 0;
+    const cyl = (rt: number, rb: number, h: number, seg = 12) => new THREE.CylinderGeometry(rt, rb, h, seg);
+    const box = (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d);
+    const PI2 = Math.PI / 2;
 
-      add(new THREE.BoxGeometry(0.062 * scale, 0.062 * scale, 0.38 * scale), bodyMat, 0, 0, zOff);
-      add(new THREE.CylinderGeometry(0.013, 0.013, isPistol ? 0.22 : 0.42, 12), metalMat, 0, 0.01, -0.36 * scale + zOff, Math.PI / 2, 0, 0);
-      if (!isPistol) add(new THREE.CylinderGeometry(0.009, 0.009, 0.22, 8), metalMat, 0, 0.026, -0.25, Math.PI / 2, 0, 0);
-      add(new THREE.BoxGeometry(0.052 * scale, 0.052 * scale, isSmg ? 0.12 : 0.22 * scale), isPistol ? metalMat : woodMat, 0, -0.01, (isPistol ? 0.12 : 0.22) * scale + zOff);
-      add(new THREE.BoxGeometry(0.042 * scale, 0.105 * scale, 0.056 * scale), woodMat, 0, -0.082 * scale, 0.1 * scale + zOff, 0.3, 0, 0);
-      add(new THREE.BoxGeometry(0.058 * scale, 0.058 * scale, isPistol ? 0.1 : 0.18), woodMat, 0, 0, -0.18 + zOff);
-      add(new THREE.BoxGeometry(0.042, isPistol ? 0.12 : 0.17, 0.065), bodyMat, 0, isPistol ? -0.1 : -0.135, 0.025 + zOff, -0.15, 0, 0);
-      add(new THREE.BoxGeometry(0.022, 0.032, 0.012), metalMat, 0, 0.052, -0.47 + zOff);
-      add(new THREE.BoxGeometry(0.038, 0.027, 0.022), metalMat, 0, 0.044, -0.02 + zOff);
-      add(new THREE.BoxGeometry(0.026, 0.016, 0.032), metalMat, 0.042, 0.026, 0.05 + zOff);
+    // muzzle flash Z position (set per weapon)
+    let muzzleZ = -0.65;
+
+    // ════════════════════════════════════════════════
+    if (id === 'knife') {
+      // ── BAYONET KNIFE ──
+      // Blade — tapered using scaled box
+      const blade = new THREE.Mesh(box(0.016, 0.008, 0.26), MAT.chrome);
+      blade.position.set(0, 0.004, -0.18); blade.castShadow = true;
+      this.weaponGroup.add(blade);
+      // Blade edge bevel
+      add(box(0.004, 0.016, 0.26), MAT.steel,      0.009, -0.002, -0.18);
+      // False edge (top clip)
+      add(box(0.012, 0.004, 0.10), MAT.chrome,     0, 0.008, -0.26);
+      // Blood groove
+      add(box(0.002, 0.003, 0.20), MAT.darkSteel,  0, 0.001, -0.16);
+      // Crossguard
+      add(box(0.008, 0.055, 0.012), MAT.steel,     0, 0, -0.045);
+      // Ricasso
+      add(box(0.020, 0.014, 0.028), MAT.darkSteel, 0, 0, -0.058);
+      // Handle — wrapped grip
+      add(box(0.024, 0.030, 0.115), MAT.rubber,    0, -0.002, 0.025);
+      // Grip grooves
+      for (let i = 0; i < 5; i++) add(box(0.026, 0.003, 0.006), MAT.black, 0, -0.002, -0.028 + i * 0.018);
+      // Pommel
+      add(box(0.022, 0.026, 0.022), MAT.steel,     0, 0, 0.088);
+      add(cyl(0.010, 0.013, 0.012, 8), MAT.darkSteel, 0, 0, 0.100, 0, 0, 0);
+      muzzleZ = -0.32;
+
+    // ════════════════════════════════════════════════
+    } else if (id === 'p250') {
+      // ── P250 PISTOL ──
+      // Slide (top)
+      add(box(0.050, 0.038, 0.195), MAT.darkSteel, 0, 0.012, -0.062);
+      // Serrations on slide
+      for (let i = 0; i < 6; i++) add(box(0.052, 0.038, 0.003), MAT.black, 0, 0.012, 0.04 + i * 0.010);
+      // Barrel
+      add(cyl(0.011, 0.011, 0.185, 12), MAT.steel, 0, 0.014, -0.148, PI2, 0, 0);
+      // Muzzle crown
+      add(cyl(0.014, 0.011, 0.010, 12), MAT.steel, 0, 0.014, -0.243, PI2, 0, 0);
+      // Frame (lower)
+      add(box(0.046, 0.030, 0.185), MAT.black,    0, -0.012, -0.062);
+      // Trigger guard
+      add(box(0.044, 0.006, 0.058), MAT.black,    0, -0.032, -0.010);
+      add(cyl(0.003, 0.003, 0.044, 8), MAT.black, 0, -0.030, -0.039, PI2, 0, 0);
+      // Trigger
+      add(box(0.006, 0.020, 0.008), MAT.steel,    0, -0.038, -0.010);
+      // Grip
+      add(box(0.048, 0.095, 0.088), MAT.rubber,   0, -0.080, 0.058);
+      // Grip texture lines
+      for (let i = 0; i < 8; i++) add(box(0.050, 0.003, 0.090), MAT.black, 0, -0.044 - i * 0.011, 0.058);
+      // Backstrap
+      add(box(0.008, 0.090, 0.010), MAT.darkSteel, 0, -0.080, 0.015);
+      // Magazine base
+      add(box(0.042, 0.010, 0.082), MAT.steel,    0, -0.131, 0.058);
+      // Front sight
+      add(box(0.008, 0.010, 0.005), MAT.steel,    0, 0.034, -0.238);
+      // Rear sight
+      add(box(0.038, 0.010, 0.008), MAT.steel,    0, 0.034, 0.040);
+      add(box(0.006, 0.010, 0.008), MAT.steel,   -0.018, 0.034, 0.040);
+      add(box(0.006, 0.010, 0.008), MAT.steel,    0.018, 0.034, 0.040);
+      // Rail under barrel
+      add(box(0.046, 0.008, 0.060), MAT.darkSteel, 0, -0.006, -0.100);
+      muzzleZ = -0.25;
+
+    // ════════════════════════════════════════════════
+    } else if (id === 'deagle') {
+      // ── DESERT EAGLE ──
+      // Large slide
+      add(box(0.058, 0.050, 0.235), MAT.gunmetal,  0, 0.016, -0.068);
+      // Barrel (exposed, longer)
+      add(cyl(0.013, 0.013, 0.260, 12), MAT.steel,  0, 0.020, -0.155, PI2, 0, 0);
+      // Muzzle brake
+      add(cyl(0.018, 0.016, 0.018, 12), MAT.steel,  0, 0.020, -0.278, PI2, 0, 0);
+      add(box(0.036, 0.006, 0.018), MAT.steel,       0, 0.026, -0.278); // top port
+      // Gas piston tube (DEs are gas-operated)
+      add(cyl(0.008, 0.008, 0.190, 8), MAT.darkSteel, 0, 0.040, -0.110, PI2, 0, 0);
+      // Frame
+      add(box(0.054, 0.036, 0.235), MAT.gunmetal,   0, -0.016, -0.068);
+      // Trigger guard (large, angular)
+      add(box(0.052, 0.008, 0.075), MAT.gunmetal,   0, -0.040, -0.006);
+      add(box(0.052, 0.028, 0.006), MAT.gunmetal,   0, -0.026, -0.044);
+      // Trigger
+      add(box(0.007, 0.026, 0.009), MAT.steel,      0, -0.048, -0.006);
+      // Grip — angular, ergonomic
+      add(box(0.052, 0.115, 0.098), MAT.rubber,     0, -0.098, 0.072);
+      // Grip checkering
+      for (let i = 0; i < 9; i++) add(box(0.054, 0.004, 0.100), MAT.black, 0, -0.048 - i * 0.012, 0.072);
+      // Magazine (large, double-stack)
+      add(box(0.048, 0.015, 0.092), MAT.steel,      0, -0.166, 0.072);
+      // Sights (prominent)
+      add(box(0.012, 0.016, 0.006), MAT.steel,      0, 0.043, -0.290); // front
+      add(box(0.048, 0.014, 0.010), MAT.steel,      0, 0.043, 0.042);  // rear
+      // Hammer (exposed)
+      add(box(0.018, 0.028, 0.016), MAT.steel,      0, 0.042, 0.086, 0.5, 0, 0);
+      muzzleZ = -0.29;
+
+    // ════════════════════════════════════════════════
+    } else if (id === 'mp5') {
+      // ── MP5-SD (integrally suppressed SMG) ──
+      // Receiver
+      add(box(0.056, 0.056, 0.310), MAT.black,       0, 0, 0);
+      // Integrated suppressor (fat barrel housing)
+      add(cyl(0.028, 0.028, 0.340, 16), MAT.darkSteel, 0, 0.004, -0.270, PI2, 0, 0);
+      // Suppressor end cap
+      add(cyl(0.026, 0.030, 0.012, 16), MAT.steel,   0, 0.004, -0.442, PI2, 0, 0);
+      // Suppressor vent holes (decorative rings)
+      for (let i = 0; i < 6; i++) add(cyl(0.030, 0.030, 0.003, 12), MAT.black, 0, 0.004, -0.190 - i * 0.036, PI2, 0, 0);
+      // Cocking handle slot
+      add(box(0.008, 0.012, 0.045), MAT.black,       0.032, 0.014, 0.055);
+      // Cocking handle
+      add(box(0.018, 0.012, 0.020), MAT.steel,       0.042, 0.014, 0.055);
+      // Charging handle track
+      add(box(0.004, 0.008, 0.060), MAT.darkSteel,   0.028, 0.010, 0.055);
+      // Fixed stock (retracted, MP5A3-style)
+      add(box(0.048, 0.028, 0.190), MAT.black,       0, -0.010, 0.240);
+      add(box(0.012, 0.055, 0.012), MAT.steel,       0.020, 0.010, 0.335);
+      add(box(0.012, 0.055, 0.012), MAT.steel,      -0.020, 0.010, 0.335);
+      add(box(0.052, 0.018, 0.012), MAT.rubber,      0, -0.018, 0.335);
+      // Pistol grip
+      add(box(0.044, 0.110, 0.060), MAT.rubber,      0, -0.090, 0.110, 0.2, 0, 0);
+      // Grip grooves
+      for (let i = 0; i < 8; i++) add(box(0.046, 0.003, 0.062), MAT.black, 0, -0.048 - i * 0.012, 0.110, 0.2, 0, 0);
+      // Curved magazine (30-round)
+      add(box(0.038, 0.148, 0.070), MAT.darkSteel,   0, -0.113, 0.020, -0.18, 0, 0);
+      // Magazine curve detail
+      add(box(0.036, 0.010, 0.070), MAT.steel,       0, -0.188, -0.003, -0.18, 0, 0);
+      // Trigger guard
+      add(box(0.050, 0.007, 0.065), MAT.black,       0, -0.042, 0.060);
+      // Trigger
+      add(box(0.007, 0.022, 0.009), MAT.steel,       0, -0.052, 0.065);
+      // Handguard (polymer with slots)
+      add(box(0.058, 0.044, 0.135), MAT.olive,       0, 0.005, -0.112);
+      for (let i = 0; i < 4; i++) add(box(0.060, 0.010, 0.012), MAT.black, 0, 0.010, -0.058 - i * 0.030);
+      // Front sight post
+      add(box(0.008, 0.024, 0.008), MAT.steel,       0, 0.040, -0.268);
+      // Rear diopter sight
+      add(box(0.040, 0.022, 0.012), MAT.steel,       0, 0.038, 0.100);
+      add(cyl(0.006, 0.006, 0.014, 8), MAT.black,    0, 0.038, 0.106, PI2, 0, 0);
+      muzzleZ = -0.45;
+
+    // ════════════════════════════════════════════════
+    } else if (id === 'ak47') {
+      // ── AK-47 ──
+      // Upper receiver
+      add(box(0.062, 0.052, 0.360), MAT.black,        0, 0.004, 0);
+      // Lower receiver
+      add(box(0.058, 0.038, 0.280), MAT.darkSteel,    0, -0.018, 0.030);
+      // Barrel (chrome-lined)
+      add(cyl(0.013, 0.013, 0.418, 12), MAT.steel,    0, 0.010, -0.368, PI2, 0, 0);
+      // Muzzle nut
+      add(cyl(0.016, 0.013, 0.022, 12), MAT.steel,    0, 0.010, -0.579, PI2, 0, 0);
+      // Gas tube above barrel
+      add(cyl(0.007, 0.007, 0.220, 8), MAT.darkSteel, 0, 0.030, -0.250, PI2, 0, 0);
+      // Gas block
+      add(box(0.024, 0.022, 0.028), MAT.steel,        0, 0.020, -0.258);
+      // Gas piston (peek)
+      add(cyl(0.006, 0.006, 0.080, 8), MAT.steel,     0, 0.030, -0.168, PI2, 0, 0);
+      // Front trunnion
+      add(box(0.064, 0.048, 0.028), MAT.darkSteel,    0, 0.002, -0.166);
+      // Handguard — laminated wood, two-piece
+      add(box(0.060, 0.048, 0.180), MAT.wood,         0, 0.000, -0.170);
+      add(box(0.056, 0.022, 0.180), MAT.darkWood,     0, -0.018, -0.170);
+      // Handguard retainer
+      add(box(0.064, 0.010, 0.010), MAT.steel,        0, 0.014, -0.088);
+      // Pistol grip (ergonomic, wood)
+      add(box(0.040, 0.120, 0.058), MAT.walnut,       0, -0.092, 0.108, 0.28, 0, 0);
+      // Grip cap
+      add(box(0.038, 0.012, 0.060), MAT.steel,        0, -0.155, 0.120, 0.28, 0, 0);
+      // Trigger guard (steel)
+      add(box(0.055, 0.007, 0.068), MAT.darkSteel,    0, -0.040, 0.056);
+      add(box(0.055, 0.030, 0.007), MAT.darkSteel,    0, -0.025, 0.022);
+      // Trigger
+      add(box(0.007, 0.026, 0.010), MAT.steel,        0, -0.052, 0.056);
+      // Selector lever (right side)
+      add(box(0.005, 0.020, 0.042), MAT.steel,        0.032, -0.004, 0.098);
+      // Dust cover
+      add(box(0.060, 0.018, 0.180), MAT.black,        0, 0.032, 0.048);
+      // Charging handle (right side)
+      add(box(0.028, 0.014, 0.034), MAT.steel,        0.034, 0.022, 0.050);
+      // Curved 30-round magazine
+      add(box(0.042, 0.175, 0.074), MAT.darkSteel,    0, -0.132, 0.018, -0.16, 0, 0);
+      // Magazine catch
+      add(box(0.044, 0.010, 0.022), MAT.steel,        0, -0.042, -0.020);
+      // AK stock — underfolding style
+      add(box(0.050, 0.042, 0.220), MAT.walnut,       0, -0.008, 0.248);
+      add(box(0.048, 0.028, 0.016), MAT.steel,        0, -0.006, 0.358);
+      // Stock rod
+      add(cyl(0.006, 0.006, 0.220, 8), MAT.darkSteel, 0.018, -0.005, 0.248, PI2, 0, 0);
+      add(cyl(0.006, 0.006, 0.220, 8), MAT.darkSteel, -0.018, -0.005, 0.248, PI2, 0, 0);
+      // Front sight post (tall AK-style)
+      add(box(0.022, 0.044, 0.022), MAT.steel,        0, 0.050, -0.462);
+      add(cyl(0.004, 0.004, 0.024, 8), MAT.steel,     0, 0.064, -0.462);
+      // Rear tangent sight
+      add(box(0.040, 0.028, 0.022), MAT.steel,        0, 0.042, 0.055);
+      add(box(0.008, 0.028, 0.022), MAT.steel,        0, 0.042, 0.068);
+      muzzleZ = -0.59;
+
+    // ════════════════════════════════════════════════
+    } else if (id === 'm4a4') {
+      // ── M4A4 (AR-15 platform) ──
+      // Upper receiver (flat-top)
+      add(box(0.058, 0.050, 0.340), MAT.gunmetal,     0, 0.004, 0);
+      // Picatinny top rail
+      add(box(0.036, 0.012, 0.340), MAT.darkSteel,    0, 0.032, 0.000);
+      for (let i = 0; i < 14; i++) add(box(0.038, 0.004, 0.006), MAT.black, 0, 0.040, -0.140 + i * 0.022);
+      // Barrel (government profile, 14.5")
+      add(cyl(0.014, 0.014, 0.365, 12), MAT.steel,    0, 0.008, -0.342, PI2, 0, 0);
+      // Barrel thin section
+      add(cyl(0.010, 0.010, 0.120, 12), MAT.steel,    0, 0.008, -0.444, PI2, 0, 0);
+      // Pinned flash hider (birdcage)
+      add(cyl(0.014, 0.012, 0.055, 6), MAT.darkSteel, 0, 0.008, -0.530, PI2, 0, 0);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        add(box(0.003, 0.040, 0.003), MAT.black, Math.cos(a) * 0.014, 0.008 + Math.sin(a) * 0.014, -0.530);
+      }
+      // Delta ring / barrel nut
+      add(cyl(0.022, 0.020, 0.025, 12), MAT.steel,    0, 0.008, -0.162, PI2, 0, 0);
+      // M4 handguard (double heat shield)
+      add(box(0.058, 0.052, 0.178), MAT.olive,        0, 0.004, -0.247);
+      // Handguard vents
+      for (let i = 0; i < 5; i++) add(box(0.060, 0.008, 0.018), MAT.black, 0, 0.028, -0.172 - i * 0.034);
+      for (let i = 0; i < 5; i++) add(box(0.060, 0.008, 0.018), MAT.black, 0, -0.018, -0.172 - i * 0.034);
+      // Lower receiver
+      add(box(0.054, 0.044, 0.262), MAT.gunmetal,     0, -0.016, 0.026);
+      // Pistol grip (A2-style)
+      add(box(0.038, 0.118, 0.055), MAT.rubber,       0, -0.096, 0.116, 0.22, 0, 0);
+      // Grip fins
+      for (let i = 0; i < 8; i++) add(box(0.040, 0.003, 0.057), MAT.black, 0, -0.060 - i * 0.013, 0.116, 0.22, 0, 0);
+      // Trigger guard (M4 curved)
+      add(box(0.052, 0.007, 0.072), MAT.gunmetal,     0, -0.036, 0.060);
+      add(box(0.052, 0.024, 0.007), MAT.gunmetal,     0, -0.024, 0.026);
+      // Trigger
+      add(box(0.007, 0.025, 0.010), MAT.steel,        0, -0.050, 0.058);
+      // STANAG 30-round magazine (straight-ish)
+      add(box(0.040, 0.168, 0.068), MAT.olive,        0, -0.128, 0.014, -0.08, 0, 0);
+      add(box(0.038, 0.010, 0.068), MAT.steel,        0, -0.211, 0.021, -0.08, 0, 0);
+      // Bolt catch
+      add(box(0.006, 0.018, 0.014), MAT.steel,       -0.030, -0.020, -0.010);
+      // Mag release
+      add(cyl(0.007, 0.007, 0.010, 8), MAT.steel,    0.030, -0.034, -0.005, 0, 0, PI2);
+      // Buffer tube (collapsible stock)
+      add(cyl(0.020, 0.022, 0.195, 10), MAT.darkSteel, 0, -0.006, 0.255, PI2, 0, 0);
+      // Stock (M4 6-position)
+      add(box(0.058, 0.055, 0.135), MAT.olive,        0, -0.010, 0.342);
+      add(box(0.052, 0.018, 0.135), MAT.rubber,       0, -0.040, 0.342);
+      // Stock release button
+      add(box(0.060, 0.008, 0.016), MAT.steel,        0, -0.019, 0.285);
+      // Forward assist
+      add(box(0.010, 0.014, 0.018), MAT.steel,        0.032, 0.012, -0.020);
+      // Ejection port cover
+      add(box(0.010, 0.020, 0.072), MAT.darkSteel,    0.030, 0.002, 0.062);
+      // Rear BUIS sight
+      add(box(0.038, 0.030, 0.014), MAT.steel,        0, 0.040, 0.115);
+      add(box(0.008, 0.030, 0.014), MAT.black,        0, 0.040, 0.122);
+      // Front sight (folded, on barrel)
+      add(box(0.028, 0.022, 0.014), MAT.steel,        0, 0.034, -0.350);
+      add(box(0.006, 0.018, 0.014), MAT.black,        0, 0.038, -0.358);
+      muzzleZ = -0.58;
+
+    // ════════════════════════════════════════════════
+    } else if (id === 'awp') {
+      // ── AWP (L115A3 / Arctic Warfare) ──
+      // Receiver body (long, bolt-action)
+      add(box(0.066, 0.065, 0.420), MAT.gunmetal,     0, 0.005, 0);
+      // Heavy barrel (fluted)
+      add(cyl(0.016, 0.016, 0.580, 12), MAT.steel,    0, 0.012, -0.440, PI2, 0, 0);
+      // Fluting on barrel
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        add(cyl(0.004, 0.004, 0.300, 6), MAT.darkSteel, Math.cos(a)*0.016, 0.012 + Math.sin(a)*0.016, -0.380, PI2, 0, a);
+      }
+      // Muzzle brake (large, prominent)
+      add(cyl(0.024, 0.022, 0.048, 12), MAT.steel,    0, 0.012, -0.752, PI2, 0, 0);
+      add(box(0.048, 0.012, 0.048), MAT.steel,        0, 0.020, -0.752); // top port
+      add(box(0.048, 0.008, 0.048), MAT.steel,        0, 0.004, -0.752); // lower port
+      // Bolt body
+      add(box(0.028, 0.028, 0.095), MAT.steel,        0, 0.005, 0.135);
+      // Bolt handle (90° rotated)
+      add(cyl(0.007, 0.007, 0.065, 8), MAT.steel,     0.032, 0.010, 0.135, 0, 0, PI2);
+      // Bolt handle ball
+      add(cyl(0.014, 0.014, 0.014, 10), MAT.chrome,   0.068, 0.010, 0.135);
+      // Ejection port
+      add(box(0.068, 0.022, 0.060), MAT.black,        0, 0.018, 0.060);
+      // Chassis / stock (folding, green)
+      add(box(0.068, 0.058, 0.295), MAT.olive,        0, -0.014, 0.278);
+      // Cheekpiece
+      add(box(0.062, 0.038, 0.120), MAT.olive,        0, 0.034, 0.290);
+      add(box(0.060, 0.012, 0.120), MAT.rubber,       0, 0.052, 0.290);
+      // Adjustable butt pad
+      add(box(0.065, 0.075, 0.020), MAT.rubber,       0, 0.000, 0.428);
+      add(box(0.063, 0.070, 0.010), MAT.steel,        0, 0.000, 0.438);
+      // Pistol grip
+      add(box(0.044, 0.118, 0.060), MAT.olive,        0, -0.092, 0.120, 0.18, 0, 0);
+      add(box(0.042, 0.118, 0.062), MAT.rubber,       0, -0.092, 0.122, 0.18, 0, 0);
+      // Trigger guard
+      add(box(0.060, 0.007, 0.075), MAT.steel,        0, -0.040, 0.062);
+      // Trigger
+      add(box(0.007, 0.028, 0.010), MAT.steel,        0, -0.055, 0.062);
+      // Detachable box magazine (5-round)
+      add(box(0.046, 0.100, 0.080), MAT.steel,        0, -0.102, 0.014);
+      add(box(0.044, 0.010, 0.078), MAT.darkSteel,    0, -0.156, 0.014);
+      // Schmidt & Bender scope (large)
+      add(cyl(0.030, 0.030, 0.255, 14), MAT.black,    0, 0.068, -0.080, PI2, 0, 0);
+      // Scope objective bell
+      add(cyl(0.038, 0.030, 0.038, 14), MAT.black,    0, 0.068, -0.220, PI2, 0, 0);
+      // Scope eyepiece bell
+      add(cyl(0.034, 0.030, 0.030, 14), MAT.black,    0, 0.068, 0.072, PI2, 0, 0);
+      // Turrets (elevation/windage)
+      add(cyl(0.012, 0.012, 0.030, 8), MAT.steel,     0, 0.102, -0.070, 0, 0, 0);
+      add(cyl(0.012, 0.012, 0.030, 8), MAT.steel,     0.042, 0.068, -0.070, 0, 0, PI2);
+      // Scope mounts (rings)
+      add(cyl(0.034, 0.034, 0.018, 12), MAT.steel,    0, 0.068, -0.018, PI2, 0, 0);
+      add(cyl(0.034, 0.034, 0.018, 12), MAT.steel,    0, 0.068, -0.142, PI2, 0, 0);
+      // Harris bipod legs
+      add(cyl(0.005, 0.005, 0.090, 6), MAT.darkSteel, -0.022, -0.050, -0.310, 0.4, 0, 0);
+      add(cyl(0.005, 0.005, 0.090, 6), MAT.darkSteel,  0.022, -0.050, -0.310, 0.4, 0, 0);
+      add(box(0.058, 0.010, 0.016), MAT.steel,         0, -0.014, -0.300);
+      muzzleZ = -0.78;
+
+    // ════════════════════════════════════════════════
+    } else if (id === 'm249') {
+      // ── M249 SAW (belt-fed LMG) ──
+      // Heavy receiver
+      add(box(0.076, 0.068, 0.420), MAT.olive,        0, 0.006, 0);
+      // Heavy barrel (quick-detach, bipod visible)
+      add(cyl(0.018, 0.018, 0.500, 12), MAT.steel,    0, 0.012, -0.380, PI2, 0, 0);
+      // Barrel flare
+      add(cyl(0.022, 0.018, 0.020, 12), MAT.steel,    0, 0.012, -0.630, PI2, 0, 0);
+      // Flash hider
+      add(cyl(0.018, 0.015, 0.042, 8), MAT.darkSteel, 0, 0.012, -0.662, PI2, 0, 0);
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2;
+        add(box(0.004, 0.030, 0.004), MAT.black, Math.cos(a)*0.018, 0.012+Math.sin(a)*0.018, -0.662);
+      }
+      // Gas tube
+      add(cyl(0.009, 0.009, 0.280, 8), MAT.steel,     0, 0.038, -0.280, PI2, 0, 0);
+      // Gas block / regulator
+      add(box(0.030, 0.030, 0.032), MAT.steel,        0, 0.025, -0.332);
+      // Heat shield
+      add(box(0.080, 0.015, 0.280), MAT.olive,        0, 0.040, -0.220);
+      // Polymer handguard
+      add(box(0.074, 0.058, 0.220), MAT.olive,        0, 0.006, -0.230);
+      for (let i = 0; i < 6; i++) add(box(0.076, 0.010, 0.016), MAT.black, 0, 0.030, -0.136 - i * 0.034);
+      // Bipod (deployed, iconic LMG look)
+      add(box(0.072, 0.010, 0.018), MAT.darkSteel,    0, -0.012, -0.330);
+      add(cyl(0.006, 0.006, 0.140, 6), MAT.steel,    -0.030, -0.082, -0.330, 0.15, 0, 0);
+      add(cyl(0.006, 0.006, 0.140, 6), MAT.steel,     0.030, -0.082, -0.330, 0.15, 0, 0);
+      add(box(0.020, 0.008, 0.040), MAT.rubber,      -0.030, -0.153, -0.322);
+      add(box(0.020, 0.008, 0.040), MAT.rubber,       0.030, -0.153, -0.322);
+      // Pistol grip
+      add(box(0.044, 0.125, 0.060), MAT.rubber,       0, -0.100, 0.120, 0.22, 0, 0);
+      for (let i = 0; i < 9; i++) add(box(0.046, 0.003, 0.062), MAT.black, 0, -0.055 - i * 0.013, 0.120, 0.22, 0, 0);
+      // Trigger guard
+      add(box(0.072, 0.008, 0.078), MAT.olive,        0, -0.040, 0.062);
+      // Trigger
+      add(box(0.008, 0.028, 0.010), MAT.steel,        0, -0.055, 0.065);
+      // SAW dust cover / feed tray
+      add(box(0.078, 0.020, 0.200), MAT.olive,        0, 0.042, 0.065);
+      // Box magazine (200-round plastic)
+      add(box(0.076, 0.095, 0.160), MAT.tan,          0, -0.088, -0.030);
+      add(box(0.074, 0.010, 0.158), MAT.olive,        0, -0.040, -0.030);
+      // Belt feed chute
+      add(box(0.032, 0.020, 0.090), MAT.steel,        0.044, 0.018, -0.080, 0, 0, 0.3);
+      // Para stock (folded)
+      add(box(0.068, 0.055, 0.210), MAT.olive,        0, -0.012, 0.278);
+      add(box(0.066, 0.055, 0.020), MAT.rubber,       0, -0.012, 0.383);
+      // Charging handle (top)
+      add(box(0.018, 0.016, 0.040), MAT.steel,        0.042, 0.030, 0.060);
+      // Rear sight
+      add(box(0.030, 0.030, 0.016), MAT.steel,        0, 0.050, 0.120);
+      muzzleZ = -0.69;
     }
 
-    // ── HANDS (proportional human arms) ──
-    // Right hand & forearm
-    const rfArm = add(new THREE.CylinderGeometry(0.028, 0.032, 0.22, 10), sleeveMat, 0.075, -0.14, 0.08, Math.PI / 2, 0, 0.18);
-    const rHand = add(new THREE.BoxGeometry(0.072, 0.062, 0.11), skinMat, 0.068, -0.09, 0.1);
+    // ── HANDS (same for all weapons, adapted position) ──
+    const isPistol = id === 'p250' || id === 'deagle';
+    const isKnife  = id === 'knife';
+
+    // Right forearm
+    add(cyl(0.028, 0.033, 0.230, 10), MAT.sleeve,
+      isPistol ? 0.060 : 0.075,
+      isPistol ? -0.130 : -0.145,
+      isPistol ? 0.090 : 0.075,
+      PI2, 0, isPistol ? 0.10 : 0.18);
+    // Right hand
+    add(box(0.074, 0.065, 0.115), MAT.skin,
+      isPistol ? 0.052 : 0.068,
+      isPistol ? -0.088 : -0.090,
+      isPistol ? 0.085 : 0.100);
     // Thumb R
-    add(new THREE.CylinderGeometry(0.009, 0.008, 0.045, 6), skinMat, 0.108, -0.078, 0.085, 0, 0, 0.6);
+    add(cyl(0.009, 0.008, 0.046, 6), MAT.skin,
+      isPistol ? 0.092 : 0.108,
+      isPistol ? -0.076 : -0.078,
+      isPistol ? 0.068 : 0.085, 0, 0, 0.6);
     // Fingers R
-    for (let i = 0; i < 4; i++) add(new THREE.CylinderGeometry(0.009, 0.008, 0.048, 6), skinMat, 0.048 + i * 0.014 - 0.02, -0.062, 0.062, Math.PI / 2, 0, 0);
+    for (let i = 0; i < 4; i++) add(cyl(0.009, 0.008, 0.048, 6), MAT.skin,
+      (isPistol ? 0.030 : 0.048) + i * 0.014 - 0.02,
+      isPistol ? -0.060 : -0.062,
+      isPistol ? 0.052 : 0.062, PI2, 0, 0);
 
-    // Left forearm & hand (on foregrip)
-    add(new THREE.CylinderGeometry(0.026, 0.030, 0.22, 10), sleeveMat, -0.055, -0.07, -0.18, Math.PI / 2, 0, -0.15);
-    add(new THREE.BoxGeometry(0.066, 0.056, 0.095), skinMat, -0.048, -0.030, -0.18);
-    // Thumb L
-    add(new THREE.CylinderGeometry(0.009, 0.008, 0.044, 6), skinMat, -0.088, -0.020, -0.162, 0, 0, -0.6);
-    // Fingers L
-    for (let i = 0; i < 4; i++) add(new THREE.CylinderGeometry(0.009, 0.008, 0.048, 6), skinMat, -0.068 + i * 0.014, -0.008, -0.198, Math.PI / 2, 0, 0);
+    // Left forearm & hand (only for two-handed weapons)
+    if (!isPistol && !isKnife) {
+      const lz = id === 'awp' ? -0.260 : id === 'm249' ? -0.230 : -0.180;
+      add(cyl(0.026, 0.031, 0.220, 10), MAT.sleeve, -0.055, -0.070, lz, PI2, 0, -0.15);
+      add(box(0.068, 0.058, 0.098), MAT.skin,        -0.048, -0.030, lz);
+      add(cyl(0.009, 0.008, 0.044, 6), MAT.skin,    -0.088, -0.020, lz - 0.018, 0, 0, -0.6);
+      for (let i = 0; i < 4; i++) add(cyl(0.009, 0.008, 0.048, 6), MAT.skin,
+        -0.068 + i * 0.014, -0.008, lz - 0.018, PI2, 0, 0);
+    } else if (isKnife) {
+      // Right hand wraps handle
+      add(box(0.030, 0.075, 0.100), MAT.skin,        0.005, -0.020, 0.020);
+      add(cyl(0.009, 0.008, 0.044, 6), MAT.skin,     0.038, -0.012, -0.008, 0, 0, -0.5);
+      for (let i = 0; i < 4; i++) add(cyl(0.009, 0.008, 0.048, 6), MAT.skin,
+        -0.002 + i * 0.012, -0.052, 0.015, PI2, 0, 0);
+    }
 
-    // Muzzle flash sphere
+    // ── MUZZLE FLASH ──
     const flashMat = new THREE.MeshBasicMaterial({ color: 0xffee88, transparent: true, opacity: 0 });
     this.muzzleFlashMesh = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 8), flashMat);
-    this.muzzleFlashMesh.position.set(0, 0.01, -0.65);
+    this.muzzleFlashMesh.position.set(0, 0.010, muzzleZ);
     this.weaponGroup.add(this.muzzleFlashMesh);
 
     this.muzzleFlashLight = new THREE.PointLight(0xffdd66, 0, 9);
-    this.muzzleFlashLight.position.set(0, 0.01, -0.65);
+    this.muzzleFlashLight.position.set(0, 0.010, muzzleZ);
     this.weaponGroup.add(this.muzzleFlashLight);
 
     this.weaponGroup.position.set(0.18, -0.22, -0.35);
-
-    // Suppress TS unused warning
-    void rfArm; void rHand;
   }
 
   // ─── HUMAN ENEMY MODEL ──────────────────────────────────────────────────────
