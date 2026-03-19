@@ -659,16 +659,17 @@ export class GameEngine {
 
     // ── RAY with spread ──
     const spread = this.state.isAiming ? this.weaponDef.spread * 0.3 : this.weaponDef.spread;
-    const dir = new THREE.Vector3(
-      (Math.random() - 0.5) * spread * 2,
-      (Math.random() - 0.5) * spread * 2,
-      -1
-    ).normalize();
-    dir.applyEuler(this.camera.getWorldQuaternion(new THREE.Quaternion()).toEulerOrder('YXZ') as unknown as THREE.Euler);
     const worldDir = new THREE.Vector3();
     this.camera.getWorldDirection(worldDir);
-    worldDir.add(new THREE.Vector3((Math.random() - 0.5) * spread * 2, (Math.random() - 0.5) * spread * 2, 0));
-    worldDir.normalize();
+    // Apply spread by rotating in camera-local space
+    const camQuat = new THREE.Quaternion();
+    this.camera.getWorldQuaternion(camQuat);
+    const spreadVec = new THREE.Vector3(
+      (Math.random() - 0.5) * spread * 2,
+      (Math.random() - 0.5) * spread * 2,
+      0
+    ).applyQuaternion(camQuat);
+    worldDir.add(spreadVec).normalize();
 
     const raycaster = new THREE.Raycaster(this.camera.position.clone(), worldDir, 0.1, 200);
 
